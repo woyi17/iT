@@ -78,7 +78,8 @@ async function applyFilters() {
         document.querySelector('a[href*="export_csv"]').href =
             `/admin/export/?date=${encodeURIComponent(dateVal)}&department=${encodeURIComponent(deptVal)}`;
     } catch (e) {
-        tableContainer.innerHTML = '<p class="text-error">Failed to load data. Please try again.</p>';
+        tableContainer.innerHTML = `<p class="text-error">Failed to load data: ${e.message}</p>`;
+        console.error('Filter error:', e);
     } finally {
         tableContainer.classList.remove('loading');
     }
