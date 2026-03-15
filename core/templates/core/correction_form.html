@@ -1,0 +1,82 @@
+{% extends 'core/base.html' %}
+{% block title %}Correction Request{% endblock %}
+{% block nav_hist %}active{% endblock %}
+
+{% block content %}
+<div class="page-container page-container--narrow">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Apply Correction</h1>
+            <p class="page-subtitle">Submit a request to correct your attendance record</p>
+        </div>
+        <a href="{% url 'history' %}" class="btn btn-secondary">← Back to History</a>
+    </div>
+
+    <div class="form-card">
+        <div class="record-summary">
+            <h2 class="record-summary-title">Record to Correct</h2>
+            <dl class="record-dl">
+                <div class="record-dl-row">
+                    <dt>Date</dt>
+                    <dd>{{ record.work_date|date:"l, F j, Y" }}</dd>
+                </div>
+                <div class="record-dl-row">
+                    <dt>Check-in</dt>
+                    <dd>
+                        {% if record.check_in_time %}{{ record.check_in_time|date:"H:i" }}{% else %}
+                        <span class="text-muted">Not recorded</span>{% endif %}
+                    </dd>
+                </div>
+                <div class="record-dl-row">
+                    <dt>Check-out</dt>
+                    <dd>
+                        {% if record.check_out_time %}{{ record.check_out_time|date:"H:i" }}{% else %}
+                        <span class="text-muted">Not recorded</span>{% endif %}
+                    </dd>
+                </div>
+                <div class="record-dl-row">
+                    <dt>Status</dt>
+                    <dd><span class="status-badge status-{{ record.status }}">{{ record.get_status_display }}</span></dd>
+                </div>
+            </dl>
+        </div>
+
+        {% if existing %}
+        <div class="notice notice-warning" role="status">
+            <strong>Existing Request</strong> — A correction request for this record is currently
+            <span class="correction-tag correction-{{ existing.status }}">{{ existing.get_status_display }}</span>.
+            {% if existing.status == 'approved' %}
+            Your correction has been approved.
+            {% elif existing.status == 'rejected' %}
+            Your correction was rejected. Please contact your manager if you still have concerns.
+            {% else %}
+            Please wait for your manager to review it.
+            {% endif %}
+        </div>
+        {% else %}
+        <form method="post" class="correction-form" novalidate>
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="reason">Reason for Correction <span class="required">*</span></label>
+                <textarea
+                    id="reason"
+                    name="reason"
+                    class="form-input note-textarea"
+                    placeholder="Please describe what was incorrect and what the correct information should be…"
+                    rows="4"
+                    required
+                    aria-required="true"
+                ></textarea>
+                <p class="form-hint">Be as specific as possible — include correct times if known.</p>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary" aria-label="Submit correction request">
+                    Submit Request
+                </button>
+                <a href="{% url 'history' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

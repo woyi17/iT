@@ -1,0 +1,137 @@
+{% extends 'core/base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block nav_admin_dash %}active{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Admin Dashboard</h1>
+            <p class="page-subtitle">Team attendance overview</p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'admin_corrections' %}" class="btn btn-secondary">View Correction Requests</a>
+            <a href="{% url 'export_csv' %}?date={{ filter_date }}&department={{ filter_dept }}"
+               class="btn btn-primary" aria-label="Export attendance data as CSV">
+                Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card" role="search" aria-label="Attendance filters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label for="filter-date">Date</label>
+                <input type="date" id="filter-date" class="form-input" value="{{ filter_date }}"
+                    aria-label="Filter by date">
+            </div>
+            <div class="filter-group">
+                <label for="filter-dept">Department</label>
+                <select id="filter-dept" class="form-input form-select" aria-label="Filter by department">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {% if filter_dept == dept.id|stringformat:"s" %}selected{% endif %}>
+                        {{ dept.dept_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="applyFilters()" aria-label="Apply filters">
+                Apply Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats summary -->
+    <div class="stats-row" id="stats-row" aria-live="polite">
+        {% include 'core/_admin_stats.html' %}
+    </div>
+
+    <!-- Table -->
+    <div class="table-card" id="attendance-table-container">
+        {% include 'core/_admin_table.html' %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ATTENDANCE_API = "{% url 'admin_attendance_api' %}";
+
+async function applyFilters() {
+    const dateVal = document.getElementById('filter-date').value;
+    const deptVal = document.getElementById('filter-dept').value;
+
+    const tableContainer = document.getElementById('attendance-table-container');
+    const statsRow = document.getElementById('stats-row');
+    tableContainer.classList.add('loading');
+
+    try {
+        const url = `${ATTENDANCE_API}?date=${encodeURIComponent(dateVal)}&department=${encodeURIComponent(deptVal)}`;
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await resp.json();
+        renderTable(data.records, tableContainer);
+        renderStats(data.records, statsRow);
+
+        // Update export link
+        document.querySelector('a[href*="export_csv"]').href =
+            `/admin/export/?date=${encodeURIComponent(dateVal)}&department=${encodeURIComponent(deptVal)}`;
+    } catch (e) {
+        tableContainer.innerHTML = '<p class="text-error">Failed to load data. Please try again.</p>';
+    } finally {
+        tableContainer.classList.remove('loading');
+    }
+}
+
+function renderStats(records, container) {
+    const onTime = records.filter(r => r.status === 'on_time').length;
+    const late = records.filter(r => r.status === 'late').length;
+    const missing = records.filter(r => r.status === 'missing').length;
+    container.innerHTML = `
+        <div class="stat-card stat-green"><span class="stat-num">${onTime}</span><span class="stat-lbl">On Time</span></div>
+        <div class="stat-card stat-yellow"><span class="stat-num">${late}</span><span class="stat-lbl">Late</span></div>
+        <div class="stat-card stat-red"><span class="stat-num">${missing}</span><span class="stat-lbl">Missing</span></div>
+        <div class="stat-card stat-blue"><span class="stat-num">${records.length}</span><span class="stat-lbl">Total</span></div>
+    `;
+}
+
+function renderTable(records, container) {
+    if (!records.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div>
+            <h2>No records found</h2><p>Try adjusting your filters.</p></div>`;
+        return;
+    }
+    let rows = records.map(r => `
+        <tr>
+            <td>${escHtml(r.employee)}</td>
+            <td>${escHtml(r.department)}</td>
+            <td>${escHtml(r.work_date)}</td>
+            <td><span class="mono">${escHtml(r.check_in_time)}</span></td>
+            <td><span class="mono">${escHtml(r.check_out_time)}</span></td>
+            <td>${r.duration !== '—' ? `<span class="duration-badge">${escHtml(r.duration)}</span>` : '—'}</td>
+            <td><span class="status-badge status-${escHtml(r.status)}">${escHtml(r.status_display)}</span></td>
+            <td class="td-note">${r.note ? `<span class="note-preview">${escHtml(r.note.substring(0, 40))}${r.note.length > 40 ? '…' : ''}</span>` : '—'}</td>
+        </tr>`).join('');
+
+    container.innerHTML = `
+        <table class="data-table" role="table" aria-label="Team attendance">
+            <thead><tr>
+                <th scope="col">Employee</th>
+                <th scope="col">Department</th>
+                <th scope="col">Date</th>
+                <th scope="col">Check-In</th>
+                <th scope="col">Check-Out</th>
+                <th scope="col">Duration</th>
+                <th scope="col">Status</th>
+                <th scope="col">Note</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+}
+
+function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

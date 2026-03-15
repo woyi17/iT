@@ -1,0 +1,106 @@
+{% extends 'core/base.html' %}
+{% block title %}Correction Requests{% endblock %}
+{% block nav_corrections %}active{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Correction Requests</h1>
+            <p class="page-subtitle">Review and process employee correction requests</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">← Dashboard</a>
+    </div>
+
+    <!-- Status tabs -->
+    <div class="tab-bar" role="tablist" aria-label="Filter by status">
+        <a href="?status=pending" role="tab"
+           class="tab {% if status_filter == 'pending' %}tab-active{% endif %}"
+           aria-selected="{% if status_filter == 'pending' %}true{% else %}false{% endif %}">
+           Pending
+        </a>
+        <a href="?status=approved" role="tab"
+           class="tab {% if status_filter == 'approved' %}tab-active{% endif %}"
+           aria-selected="{% if status_filter == 'approved' %}true{% else %}false{% endif %}">
+           Approved
+        </a>
+        <a href="?status=rejected" role="tab"
+           class="tab {% if status_filter == 'rejected' %}tab-active{% endif %}"
+           aria-selected="{% if status_filter == 'rejected' %}true{% else %}false{% endif %}">
+           Rejected
+        </a>
+    </div>
+
+    {% if corrections %}
+    <div class="corrections-list">
+        {% for correction in corrections %}
+        <div class="correction-item correction-item-{{ correction.status }}">
+            <div class="correction-meta">
+                <div class="correction-who">
+                    <strong>{{ correction.record.user.get_full_name|default:correction.record.user.username }}</strong>
+                    <span class="text-muted">— {{ correction.record.work_date|date:"Y-m-d" }}</span>
+                </div>
+                <span class="correction-tag correction-{{ correction.status }}">
+                    {{ correction.get_status_display }}
+                </span>
+            </div>
+
+            <dl class="correction-details">
+                <div class="correction-dl-row">
+                    <dt>Original Status</dt>
+                    <dd><span class="status-badge status-{{ correction.record.status }}">{{ correction.record.get_status_display }}</span></dd>
+                </div>
+                <div class="correction-dl-row">
+                    <dt>Check-in</dt>
+                    <dd>{% if correction.record.check_in_time %}{{ correction.record.check_in_time|date:"H:i" }}{% else %}<span class="text-muted">Not recorded</span>{% endif %}</dd>
+                </div>
+                <div class="correction-dl-row">
+                    <dt>Check-out</dt>
+                    <dd>{% if correction.record.check_out_time %}{{ correction.record.check_out_time|date:"H:i" }}{% else %}<span class="text-muted">Not recorded</span>{% endif %}</dd>
+                </div>
+                <div class="correction-dl-row">
+                    <dt>Reason</dt>
+                    <dd class="correction-reason">{{ correction.reason }}</dd>
+                </div>
+                {% if correction.reviewed_by %}
+                <div class="correction-dl-row">
+                    <dt>Reviewed by</dt>
+                    <dd>{{ correction.reviewed_by.username }}</dd>
+                </div>
+                {% endif %}
+                <div class="correction-dl-row">
+                    <dt>Submitted</dt>
+                    <dd>{{ correction.created_at|date:"Y-m-d H:i" }}</dd>
+                </div>
+            </dl>
+
+            {% if correction.status == 'pending' %}
+            <div class="correction-actions">
+                <form method="post" action="{% url 'admin_review_correction' correction.id %}" style="display:inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approved">
+                    <button type="submit" class="btn btn-approve" aria-label="Approve correction request">
+                        ✓ Approve
+                    </button>
+                </form>
+                <form method="post" action="{% url 'admin_review_correction' correction.id %}" style="display:inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="rejected">
+                    <button type="submit" class="btn btn-reject" aria-label="Reject correction request">
+                        ✗ Reject
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">✉️</div>
+        <h2>No {{ status_filter }} requests</h2>
+        <p>There are no correction requests with status "{{ status_filter }}" at the moment.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

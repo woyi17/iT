@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AttendTrack{% endblock %} — Employee Sign-in System</title>
+    {% load static %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+{% if user.is_authenticated %}
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+    <div class="nav-brand">
+        <span class="brand-icon">⏱</span>
+        <span class="brand-name">AttendTrack</span>
+    </div>
+    <div class="nav-links">
+        {% if user.profile.is_admin %}
+            <a href="{% url 'admin_dashboard' %}" class="nav-link {% block nav_admin_dash %}{% endblock %}">Dashboard</a>
+            <a href="{% url 'admin_corrections' %}" class="nav-link {% block nav_corrections %}{% endblock %}">Corrections</a>
+            <a href="{% url 'export_csv' %}" class="nav-link">Export CSV</a>
+        {% else %}
+            <a href="{% url 'dashboard' %}" class="nav-link {% block nav_dash %}{% endblock %}">Check-in</a>
+            <a href="{% url 'history' %}" class="nav-link {% block nav_hist %}{% endblock %}">My History</a>
+        {% endif %}
+    </div>
+    <div class="nav-user">
+        <span class="user-badge {% if user.profile.is_admin %}badge-admin{% else %}badge-employee{% endif %}">
+            {{ user.profile.get_role_display }}
+        </span>
+        <span class="user-name">{{ user.username }}</span>
+        <a href="{% url 'logout' %}" class="btn-logout" aria-label="Log out">Logout</a>
+    </div>
+</nav>
+{% endif %}
+
+<main class="main-content" role="main">
+    {% if messages %}
+    <div class="messages-container" aria-live="polite">
+        {% for message in messages %}
+        <div class="message message-{{ message.tags }}" role="alert">
+            <span>{{ message }}</span>
+            <button class="msg-close" onclick="this.parentElement.remove()" aria-label="Dismiss">×</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'core/js/app.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

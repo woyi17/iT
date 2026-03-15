@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% block title %}My History{% endblock %}
+{% block nav_hist %}active{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">My Attendance History</h1>
+            <p class="page-subtitle">All your check-in and check-out records</p>
+        </div>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">← Back to Check-in</a>
+    </div>
+
+    {% if records %}
+    <div class="table-card">
+        <table class="data-table" role="table" aria-label="Attendance history">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Check-In</th>
+                    <th scope="col">Check-Out</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Note</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td class="td-date">{{ record.work_date|date:"Y-m-d" }}</td>
+                    <td>
+                        {% if record.check_in_time %}
+                        <span class="mono">{{ record.check_in_time|date:"H:i" }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if record.check_out_time %}
+                        <span class="mono">{{ record.check_out_time|date:"H:i" }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if record.duration %}
+                        <span class="duration-badge">{{ record.duration }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge status-{{ record.status }}">
+                            {{ record.get_status_display }}
+                        </span>
+                    </td>
+                    <td class="td-note">
+                        {% if record.note %}
+                        <span class="note-preview" title="{{ record.note }}">{{ record.note|truncatechars:40 }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if record.correction_request %}
+                            <span class="correction-tag correction-{{ record.correction_request.status }}">
+                                Correction: {{ record.correction_request.get_status_display }}
+                            </span>
+                        {% else %}
+                            <a href="{% url 'correction_request' record.id %}" class="btn btn-xs btn-outline"
+                               aria-label="Apply correction for {{ record.work_date }}">
+                                Apply Correction
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h2>No Records Yet</h2>
+        <p>Your attendance history will appear here after your first check-in.</p>
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">Go to Check-in</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

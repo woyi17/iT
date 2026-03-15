@@ -1,0 +1,74 @@
+{% extends 'core/base.html' %}
+{% block title %}Register{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card auth-card--wide">
+        <div class="auth-header">
+            <div class="auth-logo">⏱</div>
+            <h1 class="auth-title">Create Account</h1>
+            <p class="auth-subtitle">Join the attendance system</p>
+        </div>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="message message-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" class="auth-form" novalidate>
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">Username <span class="required">*</span></label>
+                    <input type="text" id="username" name="username" class="form-input"
+                        placeholder="Choose a username" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" class="form-input"
+                        placeholder="your@email.com" autocomplete="email">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Password <span class="required">*</span></label>
+                    <input type="password" id="password" name="password" class="form-input"
+                        placeholder="Choose a password" required aria-required="true">
+                </div>
+                <div class="form-group">
+                    <label for="password2">Confirm Password <span class="required">*</span></label>
+                    <input type="password" id="password2" name="password2" class="form-input"
+                        placeholder="Repeat your password" required aria-required="true">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="department">Department</label>
+                    <select id="department" name="department" class="form-input form-select">
+                        <option value="">— No Department —</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.dept_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role <span class="required">*</span></label>
+                    <select id="role" name="role" class="form-input form-select">
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin / Manager</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" aria-label="Create account">
+                Create Account
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

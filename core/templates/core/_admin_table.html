@@ -1,0 +1,39 @@
+{% if records %}
+<table class="data-table" role="table" aria-label="Team attendance">
+    <thead>
+        <tr>
+            <th scope="col">Employee</th>
+            <th scope="col">Department</th>
+            <th scope="col">Date</th>
+            <th scope="col">Check-In</th>
+            <th scope="col">Check-Out</th>
+            <th scope="col">Duration</th>
+            <th scope="col">Status</th>
+            <th scope="col">Note</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for r in records %}
+        <tr>
+            <td>{{ r.user.get_full_name|default:r.user.username }}</td>
+            <td>{% if r.user.profile.department %}{{ r.user.profile.department.dept_name }}{% else %}—{% endif %}</td>
+            <td class="td-date">{{ r.work_date }}</td>
+            <td><span class="mono">{% if r.check_in_time %}{{ r.check_in_time|date:"H:i" }}{% else %}—{% endif %}</span></td>
+            <td><span class="mono">{% if r.check_out_time %}{{ r.check_out_time|date:"H:i" }}{% else %}—{% endif %}</span></td>
+            <td>{% if r.duration %}<span class="duration-badge">{{ r.duration }}</span>{% else %}—{% endif %}</td>
+            <td><span class="status-badge status-{{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td class="td-note">
+                {% if r.note %}<span class="note-preview" title="{{ r.note }}">{{ r.note|truncatechars:40 }}</span>
+                {% else %}—{% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h2>No records found</h2>
+    <p>No attendance records match the current filters.</p>
+</div>
+{% endif %}

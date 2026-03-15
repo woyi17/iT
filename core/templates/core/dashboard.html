@@ -1,0 +1,215 @@
+{% extends 'core/base.html' %}
+{% block title %}Check-in{% endblock %}
+{% block nav_dash %}active{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Check-in</h1>
+            <p class="page-subtitle">{{ today|date:"l, F j, Y" }}</p>
+        </div>
+        <div class="live-time" id="live-time" aria-live="polite">--:--:--</div>
+    </div>
+
+    <div class="checkin-card">
+        <div class="checkin-status-section">
+            <div class="status-indicator" id="status-indicator" aria-live="polite">
+                {% if record %}
+                    {% if record.check_out_time %}
+                    <div class="status-pill status-done">
+                        <span class="status-icon">✓</span>
+                        <span>Shift Complete</span>
+                    </div>
+                    {% else %}
+                    <div class="status-pill status-in">
+                        <span class="status-icon">●</span>
+                        <span>Currently Checked In</span>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="status-pill status-out">
+                        <span class="status-icon">○</span>
+                        <span>Not Checked In Yet</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="checkin-label" aria-live="polite">
+                Has Checked In Today:
+                <strong id="checked-in-status">
+                    {% if record %}<span class="text-green">Yes</span>{% else %}<span class="text-muted">No</span>{% endif %}
+                </strong>
+            </div>
+        </div>
+
+        <div class="checkin-times" id="checkin-times">
+            {% if record %}
+            <div class="time-item">
+                <span class="time-label">Check-in</span>
+                <span class="time-value" id="checkin-time-display">
+                    {% if record.check_in_time %}{{ record.check_in_time|date:"H:i:s" }}{% else %}—{% endif %}
+                </span>
+            </div>
+            <div class="time-item">
+                <span class="time-label">Check-out</span>
+                <span class="time-value" id="checkout-time-display">
+                    {% if record.check_out_time %}{{ record.check_out_time|date:"H:i:s" }}{% else %}—{% endif %}
+                </span>
+            </div>
+            {% if record.check_out_time %}
+            <div class="time-item">
+                <span class="time-label">Duration</span>
+                <span class="time-value time-value--highlight" id="duration-display">{{ record.duration|default:"—" }}</span>
+            </div>
+            {% endif %}
+            {% if record.status %}
+            <div class="time-item">
+                <span class="time-label">Status</span>
+                <span class="time-value status-badge status-{{ record.status }}" id="attendance-status">
+                    {{ record.get_status_display }}
+                </span>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        {% if record and not record.check_out_time or not record %}
+        <div class="note-section" id="note-section">
+            <label for="checkin-note" class="note-label">Add a note (optional)</label>
+            <textarea
+                id="checkin-note"
+                class="form-input note-textarea"
+                placeholder="e.g. Working from home today, joining standup remotely…"
+                rows="2"
+                {% if record %}disabled{% endif %}
+            ></textarea>
+        </div>
+        {% endif %}
+
+        <div class="checkin-actions">
+            {% if record and record.check_out_time %}
+                <button class="btn btn-disabled" disabled aria-label="Shift complete">
+                    Shift Complete for Today
+                </button>
+            {% elif record and record.check_in_time %}
+                <button class="btn btn-checkout" id="main-action-btn"
+                    onclick="handleAttendance()" aria-label="Check out">
+                    <span class="btn-icon">↓</span> Check Out
+                </button>
+            {% else %}
+                <button class="btn btn-checkin" id="main-action-btn"
+                    onclick="handleAttendance()" aria-label="Check in">
+                    <span class="btn-icon">↑</span> Check In
+                </button>
+            {% endif %}
+
+            <a href="{% url 'history' %}" class="btn btn-secondary" aria-label="View attendance history">
+                View History
+            </a>
+        </div>
+
+        <div id="action-feedback" class="action-feedback" aria-live="assertive" role="status"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CHECKIN_URL = "{% url 'checkin' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+function updateClock() {
+    const el = document.getElementById('live-time');
+    if (el) el.textContent = new Date().toLocaleTimeString('en-GB');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+async function handleAttendance() {
+    const btn = document.getElementById('main-action-btn');
+    const noteEl = document.getElementById('checkin-note');
+    const feedback = document.getElementById('action-feedback');
+    const note = noteEl ? noteEl.value : '';
+
+    btn.disabled = true;
+    btn.textContent = 'Processing…';
+    feedback.className = 'action-feedback';
+    feedback.textContent = '';
+
+    try {
+        const resp = await fetch(CHECKIN_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: JSON.stringify({ note }),
+        });
+        const data = await resp.json();
+
+        if (data.ok) {
+            feedback.className = 'action-feedback feedback-success';
+            feedback.textContent = data.message;
+
+            if (data.action === 'check_in') {
+                // Update UI: checked in
+                document.getElementById('checked-in-status').innerHTML = '<span class="text-green">Yes</span>';
+                document.getElementById('status-indicator').innerHTML =
+                    `<div class="status-pill status-in"><span class="status-icon">●</span><span>Currently Checked In</span></div>`;
+
+                // Show times
+                const timesDiv = document.getElementById('checkin-times');
+                timesDiv.innerHTML = `
+                    <div class="time-item"><span class="time-label">Check-in</span>
+                    <span class="time-value" id="checkin-time-display">${data.check_in_time}</span></div>
+                    <div class="time-item"><span class="time-label">Check-out</span>
+                    <span class="time-value" id="checkout-time-display">—</span></div>
+                    <div class="time-item"><span class="time-label">Status</span>
+                    <span class="time-value status-badge status-${data.status}">${capitalise(data.status)}</span></div>`;
+
+                // Swap button to check-out
+                btn.className = 'btn btn-checkout';
+                btn.innerHTML = '<span class="btn-icon">↓</span> Check Out';
+                btn.disabled = false;
+                btn.setAttribute('aria-label', 'Check out');
+
+                if (noteEl) noteEl.disabled = true;
+
+            } else if (data.action === 'check_out') {
+                // Update UI: checked out
+                document.getElementById('status-indicator').innerHTML =
+                    `<div class="status-pill status-done"><span class="status-icon">✓</span><span>Shift Complete</span></div>`;
+
+                document.getElementById('checkout-time-display').textContent = data.check_out_time;
+
+                const timesDiv = document.getElementById('checkin-times');
+                timesDiv.innerHTML += `
+                    <div class="time-item"><span class="time-label">Duration</span>
+                    <span class="time-value time-value--highlight">${data.duration}</span></div>`;
+
+                btn.className = 'btn btn-disabled';
+                btn.textContent = 'Shift Complete for Today';
+                btn.disabled = true;
+
+                const noteSection = document.getElementById('note-section');
+                if (noteSection) noteSection.style.display = 'none';
+            }
+        } else {
+            feedback.className = 'action-feedback feedback-error';
+            feedback.textContent = data.message || 'Something went wrong.';
+            btn.disabled = false;
+            btn.textContent = btn.className.includes('checkout') ? '↓ Check Out' : '↑ Check In';
+        }
+    } catch (e) {
+        feedback.className = 'action-feedback feedback-error';
+        feedback.textContent = 'Network error — please try again.';
+        btn.disabled = false;
+    }
+}
+
+function capitalise(str) {
+    return str.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+</script>
+{% endblock %}
