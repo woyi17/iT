@@ -11,7 +11,7 @@
         </div>
         <div class="header-actions">
             <a href="{% url 'admin_corrections' %}" class="btn btn-secondary">View Correction Requests</a>
-            <a href="{% url 'export_csv' %}?date={{ filter_date }}&department={{ filter_dept }}"
+            <a id="export-csv-link" href="{% url 'export_csv' %}?date={{ filter_date }}&department={{ filter_dept }}"
                class="btn btn-primary" aria-label="Export attendance data as CSV">
                 Export CSV
             </a>
@@ -75,8 +75,10 @@ async function applyFilters() {
         renderStats(data.records, statsRow);
 
         // Update export link
-        document.querySelector('a[href*="export_csv"]').href =
-            `/admin/export/?date=${encodeURIComponent(dateVal)}&department=${encodeURIComponent(deptVal)}`;
+        const exportLink = document.getElementById('export-csv-link');
+        if (exportLink) {
+            exportLink.href = `/admin/export/?date=${encodeURIComponent(dateVal)}&department=${encodeURIComponent(deptVal)}`;
+        }
     } catch (e) {
         tableContainer.innerHTML = `<p class="text-error">Failed to load data: ${e.message}</p>`;
         console.error('Filter error:', e);
